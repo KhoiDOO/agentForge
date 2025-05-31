@@ -20,6 +20,8 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph
 from tavily import TavilyClient
 
+os.environ["LANGSMITH_PROJECT"] = "agentForge"  
+os.environ["LANGSMITH_TRACING"] = "true"
 
 class ResearchStatus(str, Enum):
     """Status of the research process."""
@@ -69,11 +71,47 @@ class ResearchState:
 
 def get_llm(config: RunnableConfig):
     """Get the LLM based on configuration."""
+
     configuration = config["configurable"]
-    return ChatOpenAI(
-        model=configuration.get("model", "gpt-3.5-turbo"),
-        temperature=configuration.get("temperature", 0.7),
+    API_KEY = os.environ.get('NEBIUS_API_KEY')
+    BASE_URL = "https://api.studio.nebius.ai/v1/"
+
+    # USE WHICHEVER LLM SUITS YOUR NEEDS
+    
+    openai = ChatOpenAI(
+        model="gpt-4o-mini",  # $0.15/$0.60 per M tokens
+        api_key=os.environ.get("OPENAI_API_KEY"),
+        temperature=0.7
     )
+
+    # DeepSeek R1 - Best reasoning model (OpenAI o1 competitor)
+    deepseek_reasoning = ChatOpenAI(
+        base_url=BASE_URL,
+        api_key=API_KEY,
+        model="deepseek-ai/DeepSeek-R1",  # $0.80/$2.40 per M tokens
+        temperature=0.1  # Lower for more consistent reasoning
+    )
+
+    # Different models, same base URL
+    llama_70b = ChatOpenAI(
+        base_url=BASE_URL,
+        api_key=API_KEY,
+        model="meta-llama/Meta-Llama-3.1-70B-Instruct"  # 70B model
+    )
+
+    llama_8b_fast = ChatOpenAI(
+        base_url=BASE_URL,
+        api_key=API_KEY,
+        model="meta-llama/Meta-Llama-3.1-8B-Instruct-fast"  # 8B fast variant
+    )
+
+    qwen_model = ChatOpenAI(
+        base_url=BASE_URL,
+        api_key=API_KEY,
+        model="Qwen/Qwen2.5-Coder-32B-Instruct"  # Qwen coding model
+    )
+
+    return openai
 
 
 async def process_question(state: ResearchState, config: RunnableConfig) -> Dict[str, Any]:
