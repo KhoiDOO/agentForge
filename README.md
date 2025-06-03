@@ -34,10 +34,10 @@ python -m langgraph_cli dev
 
 Before running the project, you need to get free API keys:
 
-1. **OpenAI API Key**
-   - Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-   - Create account and generate API key
-   - Copy the key (starts with `sk-`)
+1. **Nebius API Key**
+   - Go to [https://studio.nebius.com/](https://studio.nebius.com/)
+   - Create account and generate API key (Use the discount code in the handbook!)
+   - Copy the key and the base URL for the models you want to use, we already have a list of models in the code
 
 2. **Tavily API Key** (For web search capabilities)
    - Go to [app.tavily.com](https://app.tavily.com)
@@ -55,9 +55,14 @@ Edit your `.env` file:
 
 ```bash
 # Required
-OPENAI_API_KEY=sk-your-openai-key-here
+NEBIUS_API_KEY=your nebius api key
 TAVILY_API_KEY=tvly-your-tavily-key-here
 LANGSMITH_API_KEY=lsv2_your-langsmith-key-here
+```
+```bash
+# Optional if you are using other model
+OPENAI_API_KEY=sk-your-openai-key-here
+CLAUDE_API_KEY=claude-key-here
 ```
 
 ## Running the basic workflow

@@ -111,7 +111,7 @@ def get_llm(config: RunnableConfig):
         model="Qwen/Qwen2.5-Coder-32B-Instruct"  # Qwen coding model
     )
 
-    return openai
+    return llama_70b
 
 
 async def process_question(state: ResearchState, config: RunnableConfig) -> Dict[str, Any]:
