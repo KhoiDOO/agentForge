@@ -169,7 +169,7 @@ def make_decision(state: State, config: RunnableConfig) -> Command[Literal["aler
     configuration = config["configurable"]
     google_api = configuration.get("google-api", os.getenv("GOOGLE_API_KEY"))
 
-    context = redis_interaction.export_records(datetime.datetime.now())
+    context = redis_interaction.export_records(datetime.now())
 
     user_prompt = f"You are a professional healthcare doctor. You will now receive the answers \
         from the user to the questions you asked. \
