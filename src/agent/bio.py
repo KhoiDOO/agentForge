@@ -16,6 +16,8 @@ from tavily import TavilyClient
 from typing import Literal
 from langgraph.types import interrupt, Command
 
+from .research_assistant import get_llm
+
 os.environ["LANGSMITH_PROJECT"] = "bio"  
 os.environ["LANGSMITH_TRACING"] = "true"
 
@@ -28,6 +30,12 @@ class ResearchStatus(str, Enum):
     REPORTING = "reporting"
     COMPLETE = "complete"
     ERROR = "error"
+
+
+status = {
+    'user' : "",
+    'state' : ""
+}
 
 
 class Configuration(TypedDict):
@@ -64,36 +72,73 @@ class ResearchState:
     # Messages for conversation history
     messages: List[Dict[str, Any]] = field(default_factory=list)
 
-async def alert(state: ResearchState, config: RunnableConfig):
-    print("ALERT: Human did not approve. Taking appropriate action.")
-    # You can add more alert logic here
-    return state
+@dataclass
+class State:
+    llm_question: str = "Are you concious?"
+    human_answer: str = ""
+    action: str = ""
 
-async def another_node(state: ResearchState, config: RunnableConfig):
-    print("Another node was chosen. Continuing the workflow.")
-    # You can add more logic for this node here
-    return state
-
-async def init_question(state: ResearchState) -> Command[Literal["alert", "another_node"]]:
-    is_approved = interrupt(
-        {
-            "question": "Can you interact with me?",
-            # Surface the output that should be
-            # reviewed and approved by the human.
-            "llm_output": state["llm_output"]
-        }
-    )
+def who(state: State) -> Command[Literal["research"]]:
+    
+    is_approved = interrupt(state.llm_question)
 
     if is_approved:
-        return Command(goto="alert")
+        state.human_answer = "the user is patient"
+        status['user'] = "patient"
+        return Command(goto="research")
     else:
-        return Command(goto="another_node")
+        state.human_answer = "the user is supporter"
+        status['user'] = "supporter"
+        return Command(goto="research")
 
+def init_question(state: State) -> Command[Literal["who", "alert"]]:
+
+    is_approved = interrupt(state.llm_question)
+
+    if is_approved:
+        state.human_answer = "Approved"
+        return Command(goto="who", update={"llm_question": "Are you patient or supporter?"})
+    else:
+        return Command(goto="alert")
+    
+def research(state: State, config: RunnableConfig) -> ResearchState:
+    
+    llm = get_llm(config)
+
+    prompt = ChatPromptTemplate.from_messages([
+        (
+            "system", 
+            "You are a professional healthcare doctor. \
+                Your task is to ask the user some questions.\
+                    The user that you will ask questions is a {user}. \
+                        Return only the questions, no explanations."
+        ),
+        (
+            "user", 
+            "Create 3 effective search queries for the following research question. \
+            Return only the queries separated by newlines, no explanations:\n\n{question}"
+        )
+    ])
+
+    chain = prompt | llm | StrOutputParser()
+    search_queries = await chain.ainvoke({"question": state.question})
+
+    state.search_queries = search_queries.strip().split("\n")
+
+    return state
+
+def alert(state: State) -> ResearchState:
+    """Process the state in another way."""
+    # Example processing logic
+    state.action = "Call for ambulance."
+    return state
+
+# Example of how to add nodes and edges to the graph
 bio_graph = (
     StateGraph(ResearchState, config_schema=Configuration)
+    .add_node("who", who)
     .add_node("init_question", init_question)
+    .add_node("research", research)
     .add_node("alert", alert)
-    .add_node("another_node", another_node)
     .add_edge("__start__", "init_question")
-    .compile(name="Research Assistant")
 )
