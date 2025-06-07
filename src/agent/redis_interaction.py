@@ -18,7 +18,7 @@ def input_record(msg: str, thread: str = 'Thread-1'):
     # Lưu record vào Redis dưới dạng JSON
     r.rpush('records', json.dumps(record))
 
-def export_records( time: str, thread: 'Thread-1', time_threshold: int = 1000, other_thread_time_threshold: int = 500, msg_threshold: int = 15):
+def export_records( time: str, thread = 'Thread-1', time_threshold: int = 1000, other_thread_time_threshold: int = 500, msg_threshold: int = 15):
     records = r.lrange('records', 0, -1)
     exported_records = [json.loads(record) for record in records]
 
