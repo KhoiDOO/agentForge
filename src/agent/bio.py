@@ -161,6 +161,7 @@ def ask_questions(state: State, config: RunnableConfig) -> Command[Literal["make
         save_dct[question] = is_approved
     
     redis_interaction.input_record(str(save_dct))
+    print(11111)
 
     return Command(goto="make_decision", update={"human_answer": str(save_dct)})
 
