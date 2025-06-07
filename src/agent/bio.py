@@ -207,8 +207,7 @@ from tkinter import messagebox
 
 def alert(state: State) -> ResearchState:
     """Process the state and show a big red cross alert in the UI."""
-    if state.is_critical:  # Giả sử có thuộc tính is_critical
-        show_alert()
+    show_alert()
 
     return state
 
