@@ -19,7 +19,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph
 from tavily import TavilyClient
-import redis_interaction
+from src.agent import redis_interaction
 
 
 os.environ["LANGSMITH_PROJECT"] = "agentForge"  
