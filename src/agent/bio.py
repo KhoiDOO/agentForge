@@ -16,7 +16,9 @@ from tavily import TavilyClient
 from typing import Literal
 from langgraph.types import interrupt, Command
 
-from .research_assistant import get_llm
+from google.genai import types
+from google import genai
+import httpx
 
 os.environ["LANGSMITH_PROJECT"] = "bio"  
 os.environ["LANGSMITH_TRACING"] = "true"
@@ -77,6 +79,7 @@ class State:
     llm_question: str = "Are you concious?"
     human_answer: str = ""
     action: str = ""
+    questions: str = ""
 
 def who(state: State) -> Command[Literal["research"]]:
     
@@ -99,38 +102,108 @@ def init_question(state: State) -> Command[Literal["who", "alert"]]:
         state.human_answer = "Approved"
         return Command(goto="who", update={"llm_question": "Are you patient or supporter?"})
     else:
-        return Command(goto="alert")
+        return Command(goto="alert", update={"action": "Call for ambulance."})
     
-def research(state: State, config: RunnableConfig) -> ResearchState:
-    
-    llm = get_llm(config)
+def research(state: State, config: RunnableConfig) -> Command[Literal["ask_questions"]]:
 
-    prompt = ChatPromptTemplate.from_messages([
-        (
-            "system", 
-            "You are a professional healthcare doctor. \
-                Your task is to ask the user some questions.\
-                    The user that you will ask questions is a {user}. \
-                        Return only the questions, no explanations."
-        ),
-        (
-            "user", 
-            "Create 3 effective search queries for the following research question. \
-            Return only the queries separated by newlines, no explanations:\n\n{question}"
+    configuration = config["configurable"]
+    google_api = configuration.get("google-api", os.getenv("GOOGLE_API_KEY"))
+
+    user_prompt = f"You are a professional healthcare doctor. \
+        Your task is to ask the user some (3) critical questions.\
+        The user that you will ask questions is a {status['user']}. \
+        Only yes or no questions. \
+        Return only the questions, separated by a slash, no explanations."
+    
+    print(f"User prompt: {user_prompt}")
+
+    doc_url = "https://www.b2btrainingnetwork.ie/wp-content/uploads/2024/08/phecc-cfr-cpgs.pdf"
+    
+    client = genai.Client(api_key=google_api)
+
+    doc_data = httpx.get(doc_url).content
+
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=[
+            types.Part.from_bytes(
+                data=doc_data,
+                mime_type='application/pdf',
+            ),
+            user_prompt
+            ],
+        config=types.GenerateContentConfig(
+            max_output_tokens=512,
+            temperature=0.1
         )
-    ])
+    )
+    response = {'choices': [{'message' : {'content' : response.text}}]}
 
-    chain = prompt | llm | StrOutputParser()
-    search_queries = await chain.ainvoke({"question": state.question})
+    questions = response['choices'][0]['message']['content'].strip().split('/')
 
-    state.search_queries = search_queries.strip().split("\n")
+    print(f"Generated questions: {questions}")
 
-    return state
+    questions = ['Where do you feel the pain?'] + questions
+
+    return Command(goto="ask_questions", update={"questions": questions})
+
+def ask_questions(state: State, config: RunnableConfig) -> Command[Literal["make_decision"]]:
+    """Ask the generated questions to the user."""
+    
+    questions = state.questions
+
+    save_dct = {}
+
+    for question in questions:
+        is_approved = interrupt(question)
+        save_dct[question] = is_approved
+    
+    return Command(goto="make_decision", update={"human_answer": str(save_dct)})
+
+def make_decision(state: State, config: RunnableConfig) -> Command[Literal["alert", "minor_alert"]]:
+
+    configuration = config["configurable"]
+    google_api = configuration.get("google-api", os.getenv("GOOGLE_API_KEY"))
+
+    user_prompt = f"You are a professional healthcare doctor. You will now receive the answers \
+        from the user to the questions you asked. \
+        Your task is to analyze the answers and make a decision whether to call for an ambulance or not. \
+        The user that you will analyze is a {status['user']}. \
+        Return only the decision, either 'call ambulance' or 'do not call ambulance'. \
+        Do not return any explanations, just the decision. \
+            The answers are: {state.human_answer}"
+    
+    client = genai.Client(api_key=google_api)
+
+    my_file = client.files.upload(file="./assets/images/images.jpeg")
+    
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=[
+            my_file,
+            user_prompt
+            ],
+        config=types.GenerateContentConfig(
+            max_output_tokens=512,
+            temperature=0.1
+        )
+    )
+
+    decision = response.text
+
+    if "call ambulance" in decision.lower():
+        return Command(goto="alert", update={"action": "Call for ambulance."})
+    else:
+        return Command(goto="minor_alert", update={"action": 'Suggest calling the ambulance.'})
 
 def alert(state: State) -> ResearchState:
     """Process the state in another way."""
     # Example processing logic
-    state.action = "Call for ambulance."
+    return state
+
+def minor_alert(state: State) -> ResearchState:
+    """Process the state in another way."""
+    # Example processing logic
     return state
 
 # Example of how to add nodes and edges to the graph
@@ -139,6 +212,9 @@ bio_graph = (
     .add_node("who", who)
     .add_node("init_question", init_question)
     .add_node("research", research)
+    .add_node("make_decision", make_decision)
     .add_node("alert", alert)
+    .add_node("minor_alert", minor_alert)
+    .add_node("ask_questions", ask_questions)
     .add_edge("__start__", "init_question")
 )
