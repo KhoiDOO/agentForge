@@ -100,7 +100,7 @@ def init_question(state: State) -> Command[Literal["who", "alert"]]:
 
     is_approved = interrupt(state.llm_question)
 
-    if is_approved:
+    if is_approved == 'yes':
         state.human_answer = "Approved"
         return Command(goto="who", update={"llm_question": "Are you patient or supporter?"})
     else:
