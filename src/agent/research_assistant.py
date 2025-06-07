@@ -116,6 +116,7 @@ def get_llm(config: RunnableConfig):
 
 async def process_question(state: ResearchState, config: RunnableConfig) -> Dict[str, Any]:
     print(state.messages)
+    print(state.messages['content'][0])
     state.question = state.messages['content'][0]['text']
     """Process the research question and prepare for search."""
     if not state.question:
