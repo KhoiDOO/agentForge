@@ -115,6 +115,7 @@ def get_llm(config: RunnableConfig):
 
 
 async def process_question(state: ResearchState, config: RunnableConfig) -> Dict[str, Any]:
+    print(state)
     """Process the research question and prepare for search."""
     if not state.question:
         state.error = "No research question provided."
@@ -305,11 +306,12 @@ async def generate_report(state: ResearchState, config: RunnableConfig) -> Resea
     # Update state
     state.status = ResearchStatus.COMPLETE
     state.report = report
+
+    print(state)
+    print(type(state))
+    print(state.search_results)
     
     return state
-
-
-
 
 
 # Define the research assistant graph with a linear workflow
