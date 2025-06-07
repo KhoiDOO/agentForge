@@ -207,26 +207,7 @@ from tkinter import messagebox
 
 def alert(state: State) -> ResearchState:
     """Process the state and show a big red cross alert in the UI."""
-    show_alert()
-
     return state
-
-def show_alert():
-    """Hiển thị cảnh báo với hình cross đỏ."""
-    # Tạo cửa sổ chính
-    root = tk.Tk()
-    root.title("Alert")
-
-    # Tạo canvas để vẽ hình
-    canvas = tk.Canvas(root, width=200, height=200, bg='white')
-    canvas.pack()
-
-    # Vẽ hình cross đỏ
-    canvas.create_line(50, 50, 150, 150, fill='red', width=10)
-    canvas.create_line(150, 50, 50, 150, fill='red', width=10)
-
-    # Hiển thị cửa sổ
-    root.mainloop()
 
 def minor_alert(state: State) -> ResearchState:
     """Process the state in another way."""
