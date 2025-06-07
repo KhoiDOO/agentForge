@@ -18,7 +18,7 @@ def input_record(msg: str, thread: str = 'Thread-1'):
     # Lưu record vào Redis dưới dạng JSON
     r.rpush('records', json.dumps(record))
 
-def export_records(thread: str, time: str, time_threshold: int = 1000, other_thread_time_threshold: int = 500, msg_threshold: int = 15):
+def export_records( time: str, thread: 'Thread-1', time_threshold: int = 1000, other_thread_time_threshold: int = 500, msg_threshold: int = 15):
     records = r.lrange('records', 0, -1)
     exported_records = [json.loads(record) for record in records]
 
@@ -26,7 +26,7 @@ def export_records(thread: str, time: str, time_threshold: int = 1000, other_thr
 
 
     # Chuyển đổi thời gian input sang dạng timestamp
-    input_time = datetime.fromisoformat(time).timestamp()
+    input_time = time.timestamp()
 
     filtered_records = []
     
@@ -48,9 +48,3 @@ def export_records(thread: str, time: str, time_threshold: int = 1000, other_thr
         record_msg = '.'.join(rec['msg'] for rec in filtered_records)
 
     return record_msg
-
-
-if __name__ == "__main__":
-    # Xuất các bản ghi cho thread1 với thời gian hiện tại
-    records = export_records('thread1', datetime.now().isoformat(), 60, 30, 4)
-    print(records)

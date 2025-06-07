@@ -309,10 +309,6 @@ async def generate_report(state: ResearchState, config: RunnableConfig) -> Resea
     state.status = ResearchStatus.COMPLETE
     state.report = report
 
-    print(state)
-    print(type(state))
-    print(state.search_results[0].keys())
-    redis_interaction.input_record(state.search_results.title)
     
     return state
 

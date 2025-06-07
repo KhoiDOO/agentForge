@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, TypedDict
 import asyncio
 import requests
 import os
+from datetime import datetime
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -15,6 +16,7 @@ from langgraph.graph import StateGraph
 from tavily import TavilyClient
 from typing import Literal
 from langgraph.types import interrupt, Command
+from src.agent import redis_interaction
 
 from google.genai import types
 from google import genai
@@ -158,6 +160,8 @@ def ask_questions(state: State, config: RunnableConfig) -> Command[Literal["make
         is_approved = interrupt(question)
         save_dct[question] = is_approved
     
+    redis_interaction.input_record(str(save_dct))
+
     return Command(goto="make_decision", update={"human_answer": str(save_dct)})
 
 def make_decision(state: State, config: RunnableConfig) -> Command[Literal["alert", "minor_alert"]]:
@@ -165,13 +169,15 @@ def make_decision(state: State, config: RunnableConfig) -> Command[Literal["aler
     configuration = config["configurable"]
     google_api = configuration.get("google-api", os.getenv("GOOGLE_API_KEY"))
 
+    context = redis_interaction.export_records(datetime.datetime.now())
+
     user_prompt = f"You are a professional healthcare doctor. You will now receive the answers \
         from the user to the questions you asked. \
         Your task is to analyze the answers and make a decision whether to call for an ambulance or not. \
         The user that you will analyze is a {status['user']}. \
         Return only the decision, either 'call ambulance' or 'do not call ambulance'. \
         Do not return any explanations, just the decision. \
-            The answers are: {state.human_answer}"
+            The answers are: {state.human_answer}. Previous records are {context}."
     
     client = genai.Client(api_key=google_api)
 
