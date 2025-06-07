@@ -19,6 +19,8 @@ from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph
 from tavily import TavilyClient
+import redis_interaction
+
 
 os.environ["LANGSMITH_PROJECT"] = "agentForge"  
 os.environ["LANGSMITH_TRACING"] = "true"
@@ -309,7 +311,8 @@ async def generate_report(state: ResearchState, config: RunnableConfig) -> Resea
 
     print(state)
     print(type(state))
-    print(state.search_results)
+    print(state.search_results.title)
+    redis_interaction.input_record(state.search_results.title)
     
     return state
 
