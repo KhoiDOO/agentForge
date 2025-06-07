@@ -12,6 +12,7 @@ dependencies = [
     "langchain-openai>=0.0.2",
     "requests>=2.31.0",
     "tavily-python>=0.2.8",
+    "redis==6.2.0",
 ]
 
 
